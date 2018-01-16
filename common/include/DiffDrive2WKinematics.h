@@ -36,7 +36,7 @@
 #ifndef neo_diffdrivekinematics_h_
 #define neo_diffdrivekinematics_h_
 
-#include <neo_PlatformCtrl/Kinematics.h>
+#include <Kinematics.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/JointState.h>
 #include <trajectory_msgs/JointTrajectory.h>
