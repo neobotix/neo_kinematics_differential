@@ -116,8 +116,8 @@ int PlatformCtrlNode::init()
 	if(kin == NULL) return 1;
 	p.xAbs = 0; p.yAbs = 0; p.phiAbs = 0;
 	topicPub_Odometry = n.advertise<nav_msgs::Odometry>("/odom",1);	
-	topicSub_DriveState = n.subscribe("/drive_states",1,&PlatformCtrlNode::receiveOdo, this);
-	topicPub_DriveCommands = n.advertise<trajectory_msgs::JointTrajectory>("/cmd_drives",1);
+    topicSub_DriveState = n.subscribe("/drives/joint_states",1,&PlatformCtrlNode::receiveOdo, this);
+    topicPub_DriveCommands = n.advertise<trajectory_msgs::JointTrajectory>("/drives/joint_trajectory",1);
 	topicSub_ComVel = n.subscribe("/cmd_vel",1,&PlatformCtrlNode::receiveCmd, this);
 	return 0;
 }

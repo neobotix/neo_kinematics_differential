@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+	
+	<!-- upload parameters -->
+        <rosparam command="load" ns="kinematics_differential" file="$(find neo_kinematics_differential)/launch/test_setup.yaml"/>
+	
+	<!-- start relayboard node -->
+        <node pkg="neo_kinematics_differential" type="neo_kinematics_differential_node" ns="kinematics_differential" name="neo_kinematics_differential_node" respawn="false" output="screen"/>
+
+
+</launch>
