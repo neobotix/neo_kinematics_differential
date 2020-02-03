@@ -32,37 +32,53 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
+#include "../include/DiffDrive2WKinematics.h"
 
-#include <DiffDrive2WKinematics.h>
-#include <geometry_msgs/Vector3.h>
+#include <tf/tf.h>
 
-#define DIFF_PI 3.14159265
 
 DiffDrive2WKinematics::DiffDrive2WKinematics()
 {
-	m_dAxisLength = 0;
 }
 
-void DiffDrive2WKinematics::execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom, OdomPose& cpose)
+void DiffDrive2WKinematics::execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom)
 {
-	current_time = ros::Time::now();
-	//velocities:
-	odom.twist.twist.linear.x = 0.5 * (js.velocity[0] -  js.velocity[1]) * m_dDiam * 0.5;
-	odom.twist.twist.linear.y = 0;
-	odom.twist.twist.linear.z = 0;
-	odom.twist.twist.angular.x = 0;
-	odom.twist.twist.angular.y = 0;
-	odom.twist.twist.angular.z = -(js.velocity[0] +  js.velocity[1]) * m_dDiam /2  / m_dAxisLength;
-	//positions:
-	double dt = (current_time - last_time).toSec();
-	cpose.xAbs += odom.twist.twist.linear.x * dt * cos(cpose.phiAbs);
-	cpose.yAbs += odom.twist.twist.linear.x *dt * sin(cpose.phiAbs);
-	cpose.phiAbs += odom.twist.twist.angular.z * dt;
-	odom.pose.pose.position.x = cpose.xAbs;
-	odom.pose.pose.position.y = cpose.yAbs;
-	odom.pose.pose.position.z = 0;
-	odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(cpose.phiAbs);
-	last_time = current_time;
+	// compute current velocities
+	const double vel_x = 0.5 * (js.velocity[0] - js.velocity[1]) * (m_dDiam * 0.5);
+	const double yaw_rate = -1 * (js.velocity[0] + js.velocity[1]) * (m_dDiam * 0.5) / m_dAxisLength;
+
+	if(!m_curr_odom.header.stamp.isZero())
+	{
+		const double dt = (js.header.stamp - m_curr_odom.header.stamp).toSec();
+
+		// compute second order midpoint velocities
+		const double vel_x_mid = 0.5 * (vel_x + m_curr_odom.twist.twist.linear.x);
+		const double yaw_rate_mid = 0.5 * (yaw_rate + m_curr_odom.twist.twist.angular.z);
+
+		// compute midpoint yaw angle
+		const double phi_mid = m_phiAbs + yaw_rate_mid * dt * 0.5;
+
+		// integrate position using midpoint velocities and yaw angle
+		m_curr_odom.pose.pose.position.x += vel_x_mid * dt * cos(phi_mid);
+		m_curr_odom.pose.pose.position.y += vel_x_mid * dt * sin(phi_mid);
+		m_curr_odom.pose.pose.position.z = 0;
+
+		// integrate yaw angle using midpoint yaw rate
+		m_phiAbs += yaw_rate_mid * dt;
+		m_curr_odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(m_phiAbs);
+	}
+
+	// update timestamp and velocities last
+	m_curr_odom.header.stamp = js.header.stamp;
+	m_curr_odom.twist.twist.linear.x = vel_x;
+	m_curr_odom.twist.twist.linear.y = 0;
+	m_curr_odom.twist.twist.linear.z = 0;
+	m_curr_odom.twist.twist.angular.x = 0;
+	m_curr_odom.twist.twist.angular.y = 0;
+	m_curr_odom.twist.twist.angular.z = yaw_rate;
+
+	// return data
+	odom = m_curr_odom;
 }
 
 void DiffDrive2WKinematics::execInvKin(const geometry_msgs::Twist& twist, trajectory_msgs::JointTrajectory& traj)
@@ -73,12 +89,15 @@ void DiffDrive2WKinematics::execInvKin(const geometry_msgs::Twist& twist, trajec
 	//angular velocity in rad
 	trajectory_msgs::JointTrajectoryPoint point;
 	point.velocities.resize(4);
+
 	// w1:
 	traj.joint_names.push_back("wheel_front_left_base_link");
-	point.velocities[0] = (twist.linear.x - (twist.angular.z * m_dAxisLength) / 2) * 2 / m_dDiam; 
+	point.velocities[0] = (twist.linear.x - (twist.angular.z * m_dAxisLength) / 2) * 2 / m_dDiam;
+
 	// w2:
 	traj.joint_names.push_back("wheel_front_right_base_link");
-	point.velocities[1] = -(twist.linear.x + (twist.angular.z * m_dAxisLength) / 2) * 2 / m_dDiam; 
+	point.velocities[1] = -(twist.linear.x + (twist.angular.z * m_dAxisLength) / 2) * 2 / m_dDiam;
+
 	traj.points.push_back(point);
 }
 

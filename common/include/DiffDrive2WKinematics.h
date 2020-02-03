@@ -42,18 +42,24 @@
 #include <trajectory_msgs/JointTrajectory.h>
 #include <nav_msgs/Odometry.h>
 
-class DiffDrive2WKinematics : public Kinematics 
+class DiffDrive2WKinematics : public Kinematics
 {
-   public:
+public:
 	DiffDrive2WKinematics();
-	void execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom, OdomPose& cpose);
-	void execInvKin(const geometry_msgs::Twist& twist, trajectory_msgs::JointTrajectory& traj);
+
+	void execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom) override;
+	void execInvKin(const geometry_msgs::Twist& twist, trajectory_msgs::JointTrajectory& traj) override;
+
 	void setAxisLength(double dLength);
 	void setWheelDiameter(double dDiam);
 
-   private:
-	double m_dAxisLength;
-	double 	m_dDiam;
+private:
+	double m_phiAbs = 0;
+	nav_msgs::Odometry m_curr_odom;
+
+	double m_dAxisLength = 0;
+	double m_dDiam = 0;
+
 };
 
 

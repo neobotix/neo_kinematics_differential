@@ -40,29 +40,15 @@
 #include <sensor_msgs/JointState.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <nav_msgs/Odometry.h>
-#include <tf/transform_broadcaster.h>
 
-typedef struct {
-	double xAbs;
-	double yAbs;
-	double phiAbs;
-} OdomPose;
 
-class Kinematics 
+class Kinematics
 {
-   public:
-	Kinematics();
-	virtual void execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom, OdomPose& cpose){};
-	virtual void execInvKin(const geometry_msgs::Twist& twist, trajectory_msgs::JointTrajectory& traj){};
-   protected:
-	ros::Time current_time, last_time;
+public:
+	virtual void execForwKin(const sensor_msgs::JointState& js, nav_msgs::Odometry& odom) = 0;
+	virtual void execInvKin(const geometry_msgs::Twist& twist, trajectory_msgs::JointTrajectory& traj) = 0;
 
 };
-
-Kinematics::Kinematics(){
-	current_time = ros::Time::now();
-	last_time = ros::Time::now();
-}
 
 
 #endif //neo_kinematics_h_
