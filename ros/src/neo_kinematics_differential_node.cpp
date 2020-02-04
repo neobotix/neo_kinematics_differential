@@ -140,9 +140,9 @@ void PlatformCtrlNode::receiveOdo(const sensor_msgs::JointState& js)
 
 	// odometry msgs
 	nav_msgs::Odometry odom;
+	kin->execForwKin(js, odom);
 	odom.header.frame_id = "odom";
 	odom.child_frame_id = "base_link";
-	kin->execForwKin(js, odom);
 	topicPub_Odometry.publish(odom);
 
 	// odometry transform:
