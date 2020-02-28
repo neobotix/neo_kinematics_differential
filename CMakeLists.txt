@@ -53,8 +53,8 @@ add_library(${PROJECT_NAME} common/src/DiffDrive2WKinematics.cpp )
 
 add_executable(neo_kinematics_differential_node ros/src/neo_kinematics_differential_node.cpp)
 
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencpp)
-add_dependencies(neo_kinematics_differential_node ${PROJECT_NAME}_gencpp)
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+add_dependencies(neo_kinematics_differential_node ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(neo_kinematics_differential_node ${PROJECT_NAME})
 target_link_libraries(neo_kinematics_differential_node ${catkin_LIBRARIES})
