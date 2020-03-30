@@ -43,86 +43,59 @@
 class PlatformCtrlNode
 {
 public:
-	PlatformCtrlNode();
 	virtual ~PlatformCtrlNode();
 
-	ros::NodeHandle n;
+	ros::NodeHandle nh;
 	ros::Publisher topicPub_Odometry;
 	ros::Subscriber topicSub_DriveState;
 	ros::Publisher topicPub_DriveCommands;
 	ros::Subscriber topicSub_ComVel;
 	tf::TransformBroadcaster odom_broadcaster;
 
-	int init();
+	bool init();
 	void receiveCmd(const geometry_msgs::Twist& twist);
 	void receiveOdo(const sensor_msgs::JointState& js);
 
 private:
 	boost::mutex mutex;
-	Kinematics* kin;
-	bool sendTransform;
+	Kinematics* kin = 0;
+	bool sendTransform = false;
 
 };
-
-PlatformCtrlNode::PlatformCtrlNode()
-{
-	kin = NULL;
-}
 
 PlatformCtrlNode::~PlatformCtrlNode()
 {
 	delete kin;
 }
 
-int PlatformCtrlNode::init()
+bool PlatformCtrlNode::init()
 {
-	std::string kinType;
-	n.param<bool>("sendTransform", sendTransform, false);
-	n.getParam("kinematics", kinType);
+	nh.param<bool>("sendTransform", sendTransform, false);
 
-	if(sendTransform)
 	{
-		ROS_INFO("platform ctrl node: sending transformation");
-	} else {
-		ROS_INFO("platform ctrl node: sending no transformation");
-	}
+		double wheelDiameter = 0;
+		double axisLength = 0;
 
-	if (kinType == "DiffDrive2W")
-	{
-		double wheelDiameter;
-		double axisLength;
+		if(!nh.getParam("wheelDiameter", wheelDiameter)) {
+			ROS_ERROR_STREAM("wheelDiameter param missing");
+			return false;
+		}
+		if(!nh.getParam("robotWidth", axisLength)) {
+			ROS_ERROR_STREAM("robotWidth param missing");
+			return false;
+		}
 
-		DiffDrive2WKinematics* diffKin = new DiffDrive2WKinematics;
+		DiffDrive2WKinematics* diffKin = new DiffDrive2WKinematics();
+		diffKin->setWheelDiameter(wheelDiameter);
+		diffKin->setAxisLength(axisLength);
 		kin = diffKin;
-
-		if(n.hasParam("wheelDiameter"))
-		{
-			n.getParam("wheelDiameter",wheelDiameter);
-			diffKin->setWheelDiameter(wheelDiameter);
-			ROS_INFO("got wheeldieameter from config file");
-		}
-		else diffKin->setWheelDiameter(0.3);
-
-		if(n.hasParam("robotWidth"))
-		{
-			n.getParam("robotWidth",axisLength);
-			diffKin->setAxisLength(axisLength);
-			ROS_INFO("got axis from config file");
-		}
-		else diffKin->setAxisLength(1);
-	}
-	else
-	{
-		ROS_ERROR("neo_PlatformCtrl-Error: unknown kinematic model");
 	}
 
-	if(kin == NULL) return 1;
-
-	topicPub_Odometry = n.advertise<nav_msgs::Odometry>("/odom", 1);
-	topicSub_DriveState = n.subscribe("/drives/joint_states",1,&PlatformCtrlNode::receiveOdo, this);
-	topicPub_DriveCommands = n.advertise<trajectory_msgs::JointTrajectory>("/drives/joint_trajectory", 1);
-	topicSub_ComVel = n.subscribe("/cmd_vel", 1, &PlatformCtrlNode::receiveCmd, this);
-	return 0;
+	topicPub_Odometry = nh.advertise<nav_msgs::Odometry>("/odom", 1);
+	topicSub_DriveState = nh.subscribe("/drives/joint_states",1,&PlatformCtrlNode::receiveOdo, this);
+	topicPub_DriveCommands = nh.advertise<trajectory_msgs::JointTrajectory>("/drives/joint_trajectory", 1);
+	topicSub_ComVel = nh.subscribe("/cmd_vel", 1, &PlatformCtrlNode::receiveCmd, this);
+	return true;
 }
 
 void PlatformCtrlNode::receiveCmd(const geometry_msgs::Twist& twist)
@@ -166,8 +139,10 @@ int main (int argc, char** argv)
     ros::init(argc, argv, "neo_kinematics_differential_node");
 
 	PlatformCtrlNode node;
-	if(node.init() != 0)
-		ROS_ERROR("can't initialize neo_platformctrl_node");
+
+	if(!node.init()) {
+		return -1;
+	}
 
 	ros::spin();
 
